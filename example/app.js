@@ -1,14 +1,19 @@
-var win = Ti.UI.createWindow();
-var audioPlayer = Ti.Media.createAudioPlayer({
-	url: 'http://streams.90s90s.de/hiphop/mp3-192/streams.90s90s.de/',
-	allowBackground: true
-});
+const win = Ti.UI.createWindow();
+const mediaControl = require('ti.mediacontrol');
+
+const btn = Ti.UI.createButton({title: "create player"});
+btn.addEventListener("click", function() {
+	mediaControl.showNotification({
+		title: "-",
+		text: "-"
+	});
+})
+win.add(btn);
 win.open();
 
-var mediaControl = require('ti.mediacontrol');
-mediaControl.showNotification({
-	title: "-",
-	text: "-"
+const audioPlayer = Ti.Media.createAudioPlayer({
+	url: 'http://streams.90s90s.de/hiphop/mp3-192/streams.90s90s.de/',
+	allowBackground: true
 });
 
 mediaControl.addEventListener("changeStatus", function(e) {
