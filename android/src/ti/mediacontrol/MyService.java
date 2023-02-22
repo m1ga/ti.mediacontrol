@@ -23,16 +23,15 @@ public class MyService extends MediaBrowserServiceCompat {
 
         @Override
         public void onPlay() {
-            Log.i("---", "play");
+            Log.i("---", "play1");
             super.onPlay();
 
         }
 
         @Override
         public void onPause() {
-            Log.i("---", "pause");
+            Log.i("---", "pause1");
             super.onPause();
-
         }
     };
     private MediaSessionCompat mMediaSessionCompat;

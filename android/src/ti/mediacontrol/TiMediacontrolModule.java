@@ -24,6 +24,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.media.session.MediaButtonReceiver;
 
+import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
@@ -41,6 +42,12 @@ public class TiMediacontrolModule extends KrollModule {
     protected MediaSessionCompat mSession;
     protected MediaController mController;
     NotificationCompat.Action playPauseAction;
+
+    @Kroll.constant
+    static final int PAUSED = 0;
+    @Kroll.constant
+    static final int PLAYING = 1;
+
     public TiMediacontrolModule() {
         super();
     }
@@ -53,15 +60,16 @@ public class TiMediacontrolModule extends KrollModule {
         Log.i("---", "from receiver");
     }
 
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Kroll.method
-    public void showNotification() {
+    public void showNotification(KrollDict options) {
         Context context = TiApplication.getAppRootOrCurrentActivity();
         mSession = new MediaSessionCompat(context, "media");
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(
                 PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                        | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE);
+        //  PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
 
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
         mediaButtonIntent.setClass(context, MediaButtonReceiver.class);
@@ -69,23 +77,28 @@ public class TiMediacontrolModule extends KrollModule {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         mSession.setMediaButtonReceiver(pendingIntent);
-        mSession.setPlaybackState(stateBuilder.build());
+        mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
         mSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
                 super.onPlay();
-                Log.i("----", "play");
+                KrollDict kd = new KrollDict();
+                kd.put("status", PLAYING);
+                fireEvent("currentStatus", kd);
+                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING,0,0.0f).build());
             }
 
             @Override
             public void onPause() {
                 super.onPause();
-                Log.i("----", "pause");
+                KrollDict kd = new KrollDict();
+                kd.put("status", PAUSED);
+                fireEvent("currentStatus", kd);
+                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
             }
 
             @Override
             public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
-                Log.i("----", "on media button");
                 return super.onMediaButtonEvent(mediaButtonEvent);
             }
         });
@@ -105,8 +118,8 @@ public class TiMediacontrolModule extends KrollModule {
 
         MediaControllerCompat controller = mSession.getController();
 
-        notificationBuilder.setContentTitle("Song Title")
-                .setContentText("just some text")
+        notificationBuilder.setContentTitle(options.getString("title"))
+                .setContentText(options.getString("text"))
                 .setSmallIcon(android.R.drawable.stat_sys_warning)
                 .setContentIntent(controller.getSessionActivity())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
