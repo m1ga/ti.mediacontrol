@@ -40,7 +40,7 @@ public class TiMediacontrolModule extends KrollModule {
     protected MediaSessionManager mManager;
     protected MediaSessionCompat mSession;
     protected MediaController mController;
-
+    NotificationCompat.Action playPauseAction;
     public TiMediacontrolModule() {
         super();
     }
@@ -49,6 +49,9 @@ public class TiMediacontrolModule extends KrollModule {
     public static void onAppCreate(TiApplication app) {
     }
 
+    public static void fromReceiver() {
+        Log.i("---", "from receiver");
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Kroll.method
@@ -90,7 +93,7 @@ public class TiMediacontrolModule extends KrollModule {
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, "media");
 
-        NotificationCompat.Action playPauseAction = new NotificationCompat.Action(
+        playPauseAction = new NotificationCompat.Action(
                 R.drawable.ic_pause, "Pause",
                 MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY_PAUSE)
         );
@@ -118,10 +121,6 @@ public class TiMediacontrolModule extends KrollModule {
         notificationManager.createNotificationChannel(
                 new NotificationChannel("media", "miscellaneous", NotificationManager.IMPORTANCE_DEFAULT));
         notificationManager.notify(0, notificationBuilder.build());
-    }
-
-    public static void fromReceiver() {
-        Log.i("---", "from receiver");
     }
 
 }
