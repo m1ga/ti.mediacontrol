@@ -32,6 +32,8 @@ import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
 
 
+@RequiresApi(api = Build.VERSION_CODES.O)
+
 @Kroll.module(name = "TiMediacontrol", id = "ti.mediacontrol")
 public class TiMediacontrolModule extends KrollModule {
 
@@ -44,9 +46,15 @@ public class TiMediacontrolModule extends KrollModule {
     NotificationCompat.Action playPauseAction;
 
     @Kroll.constant
-    static final int PAUSED = 0;
+    static final int PAUSE = 0;
     @Kroll.constant
-    static final int PLAYING = 1;
+    static final int PLAY = 1;
+    int NOTIFICATION_ID = 999;
+    String CHANNEL_ID = "media";
+    Context context;
+    NotificationChannel notificationChannel = new NotificationChannel("media", "miscellaneous", NotificationManager.IMPORTANCE_DEFAULT);
+    NotificationManager notificationManager;
+    NotificationCompat.Builder notificationBuilder;
 
     public TiMediacontrolModule() {
         super();
@@ -60,11 +68,28 @@ public class TiMediacontrolModule extends KrollModule {
         Log.i("---", "from receiver");
     }
 
+    @Kroll.setProperty
+    public void setTitle(String value) {
+        notificationBuilder.setContentTitle(value);
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+    }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
+    @Kroll.setProperty
+    public void setText(String value) {
+        notificationBuilder.setContentText(value);
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+    }
+
+    @Kroll.method
+    public void updateInfo(KrollDict options) {
+        notificationBuilder.setContentTitle(options.getString(("title")));
+        notificationBuilder.setContentText(options.getString(("text")));
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+    }
+
     @Kroll.method
     public void showNotification(KrollDict options) {
-        Context context = TiApplication.getAppRootOrCurrentActivity();
+        context = TiApplication.getAppRootOrCurrentActivity();
         mSession = new MediaSessionCompat(context, "media");
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(
                 PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
@@ -83,17 +108,17 @@ public class TiMediacontrolModule extends KrollModule {
             public void onPlay() {
                 super.onPlay();
                 KrollDict kd = new KrollDict();
-                kd.put("status", PLAYING);
-                fireEvent("currentStatus", kd);
-                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING,0,0.0f).build());
+                kd.put("status", PLAY);
+                fireEvent("changeStatus", kd);
+                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 0.0f).build());
             }
 
             @Override
             public void onPause() {
                 super.onPause();
                 KrollDict kd = new KrollDict();
-                kd.put("status", PAUSED);
-                fireEvent("currentStatus", kd);
+                kd.put("status", PAUSE);
+                fireEvent("changeStatus", kd);
                 mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
             }
 
@@ -104,7 +129,7 @@ public class TiMediacontrolModule extends KrollModule {
         });
         mSession.setActive(true);
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, "media");
+        notificationBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
 
         playPauseAction = new NotificationCompat.Action(
                 R.drawable.ic_pause, "Pause",
@@ -120,7 +145,7 @@ public class TiMediacontrolModule extends KrollModule {
 
         notificationBuilder.setContentTitle(options.getString("title"))
                 .setContentText(options.getString("text"))
-                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentIntent(controller.getSessionActivity())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addAction(playPauseAction)
@@ -129,11 +154,9 @@ public class TiMediacontrolModule extends KrollModule {
                         .setMediaSession(mSession.getSessionToken())
                         .setShowActionsInCompactView(0));
 
-        NotificationManager notificationManager =
-                (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
-        notificationManager.createNotificationChannel(
-                new NotificationChannel("media", "miscellaneous", NotificationManager.IMPORTANCE_DEFAULT));
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
+        notificationManager.createNotificationChannel(notificationChannel);
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
 }

@@ -1,21 +1,26 @@
 var win = Ti.UI.createWindow();
 var audioPlayer = Ti.Media.createAudioPlayer({
-	url: 'http://icecast.unitedradio.it/Radio105.mp3',
-  allowBackground: true
+	url: 'http://streams.90s90s.de/hiphop/mp3-192/streams.90s90s.de/',
+	allowBackground: true
 });
 win.open();
 
 var mediaControl = require('ti.mediacontrol');
 mediaControl.showNotification({
-	title: "my music",
-	text: "just some text"
+	title: "-",
+	text: "-"
 });
 
-mediaControl.addEventListener("currentStatus", function(e) {
-	console.log(e.status, mediaControl.PLAYING);
-	if (e.status == mediaControl.PAUSED) {
+mediaControl.addEventListener("changeStatus", function(e) {
+	if (e.status == mediaControl.PAUSE) {
 		audioPlayer.pause();
-	} else if (e.status == mediaControl.PLAYING) {
+		mediaControl.title = ""
+		mediaControl.text = ""
+	} else if (e.status == mediaControl.PLAY) {
 		audioPlayer.start();
+		mediaControl.updateInfo({
+			title: "music playing",
+			text: "some radio station"
+		})
 	}
 })
