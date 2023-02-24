@@ -108,7 +108,7 @@ public class TiMediacontrolModule extends KrollModule {
     }
 
     @Kroll.method
-    public void showNotification(KrollDict options) {
+    public void createPlayer(KrollDict options) {
         context = TiApplication.getAppRootOrCurrentActivity();
         mSession = new MediaSessionCompat(context, "media");
 

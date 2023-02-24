@@ -10,7 +10,7 @@ const btn_close = Ti.UI.createButton({
 });
 
 btn.addEventListener("click", function() {
-	mediaControl.showNotification({
+	mediaControl.createPlayer({
 		title: "-",
 		text: "-",
 		color: "#00f",
