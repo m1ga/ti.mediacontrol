@@ -8,11 +8,14 @@
 package ti.mediacontrol;
 
 import android.app.Activity;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
@@ -30,6 +33,9 @@ import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
+import org.appcelerator.titanium.util.TiConvert;
+import org.appcelerator.titanium.util.TiUIHelper;
+import org.appcelerator.titanium.view.TiDrawableReference;
 
 
 @RequiresApi(api = Build.VERSION_CODES.O)
@@ -45,10 +51,10 @@ public class TiMediacontrolModule extends KrollModule {
     protected MediaController mController;
     NotificationCompat.Action playPauseAction;
 
-    @Kroll.constant
-    static final int PAUSE = 0;
-    @Kroll.constant
-    static final int PLAY = 1;
+    @Kroll.constant static final int PAUSE = 0;
+    @Kroll.constant static final int PLAY = 1;
+    @Kroll.constant static final int PREVIOUS = 2;
+    @Kroll.constant static final int NEXT = 3;
     int NOTIFICATION_ID = 999;
     String CHANNEL_ID = "media";
     Context context;
@@ -65,7 +71,7 @@ public class TiMediacontrolModule extends KrollModule {
     }
 
     public static void fromReceiver() {
-        Log.i("---", "from receiver");
+
     }
 
     @Kroll.setProperty
@@ -80,6 +86,15 @@ public class TiMediacontrolModule extends KrollModule {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
+    @Kroll.setProperty
+    public void setBackgroundImage(String value) {
+        TiDrawableReference source = TiDrawableReference.fromObject(this, value);
+        if (!source.isTypeNull()) {
+            notificationBuilder.setLargeIcon(source.getBitmap());
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
+    }
+
     @Kroll.method
     public void updateInfo(KrollDict options) {
         notificationBuilder.setContentTitle(options.getString(("title")));
@@ -88,13 +103,25 @@ public class TiMediacontrolModule extends KrollModule {
     }
 
     @Kroll.method
+    public void close() {
+        notificationManager.cancel(NOTIFICATION_ID);
+    }
+
+    @Kroll.method
     public void showNotification(KrollDict options) {
         context = TiApplication.getAppRootOrCurrentActivity();
         mSession = new MediaSessionCompat(context, "media");
-        PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(
-                PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                        | PlaybackStateCompat.ACTION_PLAY_PAUSE);
-        //  PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+
+        long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                | PlaybackStateCompat.ACTION_PLAY_PAUSE;
+
+        if (options.containsKeyAndNotNull("showNext")){
+            actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
+        }
+        if (options.containsKeyAndNotNull("showPrevious")){
+            actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+        }
+        PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
 
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
         mediaButtonIntent.setClass(context, MediaButtonReceiver.class);
@@ -120,6 +147,22 @@ public class TiMediacontrolModule extends KrollModule {
                 kd.put("status", PAUSE);
                 fireEvent("changeStatus", kd);
                 mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
+            }
+
+            @Override
+            public void onSkipToNext() {
+                super.onSkipToNext();
+                KrollDict kd = new KrollDict();
+                kd.put("status", NEXT);
+                fireEvent("changeStatus", kd);
+            }
+
+            @Override
+            public void onSkipToPrevious() {
+                super.onSkipToPrevious();
+                KrollDict kd = new KrollDict();
+                kd.put("status", PREVIOUS);
+                fireEvent("changeStatus", kd);
             }
 
             @Override
@@ -149,17 +192,28 @@ public class TiMediacontrolModule extends KrollModule {
                 .setContentIntent(controller.getSessionActivity())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addAction(playPauseAction)
-                //.setPriority(Notification.PRIORITY_MAX)
+                .setPriority(Notification.PRIORITY_MAX)
                 .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                         .setMediaSession(mSession.getSessionToken())
                         .setShowActionsInCompactView(0));
 
+        if (options.containsKeyAndNotNull("color")) {
+            notificationBuilder.setColorized(true);
+            notificationBuilder.setColor(TiConvert.toColor(options.get("color"), context));
+        }
+        if (options.containsKeyAndNotNull("icon")) {
+            notificationBuilder.setSmallIcon(options.getInt("icon"));
+        }
+
+        if (options.containsKeyAndNotNull("backgroundImage")) {
+            TiDrawableReference source = TiDrawableReference.fromObject(this, options.get("backgroundImage"));
+            if (!source.isTypeNull()) {
+                notificationBuilder.setLargeIcon(source.getBitmap());
+            }
+        }
         notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
         notificationManager.createNotificationChannel(notificationChannel);
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
 }
-
-
-
