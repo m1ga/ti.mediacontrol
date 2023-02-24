@@ -4,7 +4,7 @@
 
 ## Installation
 
-* download the module from [dist](./tree/main/android/dist)
+* download the module from [dist](https://github.com/m1ga/ti.mediacontrol/tree/main/android/dist)
 * put the ZIP into you project root
 * add `<module>ti.mediacontrol</module>` to your tiapp.xml `<modules>` section.
 
@@ -35,7 +35,7 @@
 
 ## Example
 
-check [examples/app.js](examples/app.js) for a full example.
+check [examples/app.js](https://github.com/m1ga/ti.mediacontrol/tree/main/example) for a full example.
 
 ## License
 
