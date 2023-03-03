@@ -76,14 +76,18 @@ public class TiMediacontrolModule extends KrollModule {
 
     @Kroll.setProperty
     public void setTitle(String value) {
-        notificationBuilder.setContentTitle(value);
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        if (notificationBuilder != null && notificationManager != null) {
+            notificationBuilder.setContentTitle(value);
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
     }
 
     @Kroll.setProperty
     public void setText(String value) {
-        notificationBuilder.setContentText(value);
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        if (notificationBuilder != null && notificationManager != null) {
+            notificationBuilder.setContentText(value);
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
     }
 
     @Kroll.setProperty
@@ -97,19 +101,23 @@ public class TiMediacontrolModule extends KrollModule {
 
     @Kroll.method
     public void updateInfo(KrollDict options) {
-        notificationBuilder.setContentTitle(options.getString(("title")));
-        notificationBuilder.setContentText(options.getString(("text")));
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        if (notificationBuilder != null && notificationManager != null) {
+            notificationBuilder.setContentTitle(options.getString(("title")));
+            notificationBuilder.setContentText(options.getString(("text")));
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
     }
 
     @Kroll.method
     public void close() {
-        notificationManager.cancel(NOTIFICATION_ID);
+        if (notificationManager != null) {
+            notificationManager.cancel(NOTIFICATION_ID);
+        }
     }
 
     @Kroll.method
     public void createPlayer(KrollDict options) {
-        context = TiApplication.getAppRootOrCurrentActivity();
+        context = TiApplication.getAppCurrentActivity();
         mSession = new MediaSessionCompat(context, "media");
 
         long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
