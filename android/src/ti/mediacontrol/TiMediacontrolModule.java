@@ -7,6 +7,8 @@
  */
 package ti.mediacontrol;
 
+import static android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -32,6 +34,7 @@ import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
+import org.appcelerator.titanium.TiActivity;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiConvert;
 import org.appcelerator.titanium.util.TiUIHelper;
@@ -41,7 +44,7 @@ import org.appcelerator.titanium.view.TiDrawableReference;
 @RequiresApi(api = Build.VERSION_CODES.O)
 
 @Kroll.module(name = "TiMediacontrol", id = "ti.mediacontrol")
-public class TiMediacontrolModule extends KrollModule {
+public class TiMediacontrolModule extends KrollModule implements MediaListener {
 
     // Standard Debugging variables
     private static final String LCAT = "TiMediacontrolModule";
@@ -68,10 +71,6 @@ public class TiMediacontrolModule extends KrollModule {
 
     @Kroll.onAppCreate
     public static void onAppCreate(TiApplication app) {
-    }
-
-    public static void fromReceiver() {
-
     }
 
     @Kroll.setProperty
@@ -200,6 +199,7 @@ public class TiMediacontrolModule extends KrollModule {
                 .setContentIntent(controller.getSessionActivity())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addAction(playPauseAction)
+                .setOngoing(true)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                         .setMediaSession(mSession.getSessionToken())
@@ -219,9 +219,19 @@ public class TiMediacontrolModule extends KrollModule {
                 notificationBuilder.setLargeIcon(source.getBitmap());
             }
         }
+
+        notificationChannel.setSound(null, null);
         notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
         notificationManager.createNotificationChannel(notificationChannel);
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
+    @Override
+    public void onMediaStateChanged(int keyCode) {
+        if (keyCode == KEYCODE_MEDIA_PLAY_PAUSE) {
+            KrollDict kd = new KrollDict();
+            kd.put("status", PAUSE);
+            fireEvent("changeStatus", kd);
+        }
+    }
 }
