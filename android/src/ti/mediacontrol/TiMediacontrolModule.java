@@ -16,8 +16,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
@@ -32,12 +30,9 @@ import androidx.media.session.MediaButtonReceiver;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
-import org.appcelerator.titanium.TiActivity;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiConvert;
-import org.appcelerator.titanium.util.TiUIHelper;
 import org.appcelerator.titanium.view.TiDrawableReference;
 
 
@@ -46,6 +41,14 @@ import org.appcelerator.titanium.view.TiDrawableReference;
 @Kroll.module(name = "TiMediacontrol", id = "ti.mediacontrol")
 public class TiMediacontrolModule extends KrollModule implements MediaListener {
 
+    @Kroll.constant
+    static final int PAUSE = 0;
+    @Kroll.constant
+    static final int PLAY = 1;
+    @Kroll.constant
+    static final int PREVIOUS = 2;
+    @Kroll.constant
+    static final int NEXT = 3;
     // Standard Debugging variables
     private static final String LCAT = "TiMediacontrolModule";
     private static final boolean DBG = TiConfig.LOGD;
@@ -53,15 +56,10 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
     protected MediaSessionCompat mSession;
     protected MediaController mController;
     NotificationCompat.Action playPauseAction;
-
-    @Kroll.constant static final int PAUSE = 0;
-    @Kroll.constant static final int PLAY = 1;
-    @Kroll.constant static final int PREVIOUS = 2;
-    @Kroll.constant static final int NEXT = 3;
     int NOTIFICATION_ID = 999;
-    String CHANNEL_ID = "media";
+    String CHANNEL_ID = "TiMediaControls";
     Context context;
-    NotificationChannel notificationChannel = new NotificationChannel("media", "miscellaneous", NotificationManager.IMPORTANCE_DEFAULT);
+    NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "mediaControls", NotificationManager.IMPORTANCE_DEFAULT);
     NotificationManager notificationManager;
     NotificationCompat.Builder notificationBuilder;
 
@@ -117,15 +115,15 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
     @Kroll.method
     public void createPlayer(KrollDict options) {
         context = TiApplication.getAppCurrentActivity();
-        mSession = new MediaSessionCompat(context, "media");
+        mSession = new MediaSessionCompat(context, CHANNEL_ID);
 
         long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
                 | PlaybackStateCompat.ACTION_PLAY_PAUSE;
 
-        if (options.containsKeyAndNotNull("showNext")){
+        if (options.containsKeyAndNotNull("showNext")) {
             actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
         }
-        if (options.containsKeyAndNotNull("showPrevious")){
+        if (options.containsKeyAndNotNull("showPrevious")) {
             actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
         }
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
@@ -192,7 +190,6 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         // );
 
         MediaControllerCompat controller = mSession.getController();
-
         notificationBuilder.setContentTitle(options.getString("title"))
                 .setContentText(options.getString("text"))
                 .setSmallIcon(android.R.drawable.ic_media_play)
@@ -203,7 +200,8 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                         .setMediaSession(mSession.getSessionToken())
-                        .setShowActionsInCompactView(0));
+                        .setShowActionsInCompactView(0)
+                );
 
         if (options.containsKeyAndNotNull("color")) {
             notificationBuilder.setColorized(true);

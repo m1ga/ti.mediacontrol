@@ -1,9 +1,7 @@
 package ti.mediacontrol;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.view.KeyEvent;
 
@@ -13,10 +11,11 @@ import org.appcelerator.kroll.common.Log;
 import org.appcelerator.titanium.TiApplication;
 
 public class MyMediaReceiver extends MediaButtonReceiver {
+    private MediaListener mediaListener;
+
     public MyMediaReceiver() {
         super();
     }
-    private MediaListener mediaListener;
 
     @Override
     public void onReceive(Context context, Intent intent) {
