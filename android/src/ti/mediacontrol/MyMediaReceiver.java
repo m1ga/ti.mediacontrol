@@ -13,6 +13,10 @@ import org.appcelerator.titanium.TiApplication;
 public class MyMediaReceiver extends MediaButtonReceiver {
     private MediaListener mediaListener;
 
+    public MyMediaReceiver() {
+        super();
+    }
+
     public MyMediaReceiver(MediaListener mediaListener) {
         super();
         this.mediaListener = mediaListener;
