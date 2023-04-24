@@ -13,8 +13,9 @@ import org.appcelerator.titanium.TiApplication;
 public class MyMediaReceiver extends MediaButtonReceiver {
     private MediaListener mediaListener;
 
-    public MyMediaReceiver() {
+    public MyMediaReceiver(MediaListener mediaListener) {
         super();
+        this.mediaListener = mediaListener;
     }
 
     @Override
@@ -25,6 +26,8 @@ public class MyMediaReceiver extends MediaButtonReceiver {
         MediaButtonReceiver.handleIntent(mSession, intent);
         KeyEvent ev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
         Log.i("TiMediacontrolModule", "Processing media button: " + ev);
-        mediaListener.onMediaStateChanged(ev.getKeyCode());
+        if (mediaListener != null) {
+            mediaListener.onMediaStateChanged(ev.getKeyCode());
+        }
     }
 }
