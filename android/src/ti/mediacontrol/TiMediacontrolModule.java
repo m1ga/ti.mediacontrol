@@ -16,6 +16,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
@@ -69,6 +70,7 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
 
     @Kroll.onAppCreate
     public static void onAppCreate(TiApplication app) {
+
     }
 
     @Kroll.setProperty
@@ -222,6 +224,9 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
         notificationManager.createNotificationChannel(notificationChannel);
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+
+        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_MEDIA_BUTTON);
+        context.registerReceiver(new MyMediaReceiver(this), intentFilter);
     }
 
     @Override
