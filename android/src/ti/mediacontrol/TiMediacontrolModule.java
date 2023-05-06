@@ -131,7 +131,7 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
 
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        mediaButtonIntent.setClass(context, MediaButtonReceiver.class);
+        mediaButtonIntent.setClass(context, MyMediaReceiver.class);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, mediaButtonIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 

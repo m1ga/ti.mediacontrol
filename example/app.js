@@ -1,13 +1,8 @@
-const win = Ti.UI.createWindow();
+const win = Ti.UI.createWindow({layout:"vertical"});
 const mediaControl = require('ti.mediacontrol');
-const btn = Ti.UI.createButton({
-	title: "create player",
-	top: 0
-});
-const btn_close = Ti.UI.createButton({
-	title: "close",
-	top: 50
-});
+const btn = Ti.UI.createButton({title: "create player"});
+const btn_change = Ti.UI.createButton({title: "change"});
+const btn_close = Ti.UI.createButton({title: "close"});
 
 btn.addEventListener("click", function() {
 	mediaControl.createPlayer({
@@ -20,11 +15,19 @@ btn.addEventListener("click", function() {
 	});
 })
 
+btn_change.addEventListener("click", function() {
+	mediaControl.backgroundImage = "/cover2.jpg"
+	mediaControl.updateInfo({
+		title: "music playing",
+		text: "some radio station"
+	})
+})
+
 btn_close.addEventListener("click", function() {
 	mediaControl.close();
 })
 
-win.add([btn, btn_close]);
+win.add([btn, btn_change, btn_close]);
 win.open();
 
 const audioPlayer = Ti.Media.createAudioPlayer({
@@ -35,10 +38,12 @@ const audioPlayer = Ti.Media.createAudioPlayer({
 mediaControl.addEventListener("changeStatus", function(e) {
 
 	if (e.status == mediaControl.PAUSE) {
+		console.log("pause");
 		audioPlayer.pause();
 		mediaControl.title = ""
 		mediaControl.text = ""
 	} else if (e.status == mediaControl.PLAY) {
+		console.log("play");
 		audioPlayer.start();
 		mediaControl.backgroundImage = "/cover2.jpg"
 		mediaControl.updateInfo({

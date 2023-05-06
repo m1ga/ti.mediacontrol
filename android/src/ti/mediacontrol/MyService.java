@@ -25,7 +25,6 @@ public class MyService extends MediaBrowserServiceCompat {
         public void onPlay() {
             Log.i("---", "play1");
             super.onPlay();
-
         }
 
         @Override
@@ -39,8 +38,8 @@ public class MyService extends MediaBrowserServiceCompat {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        ComponentName mediaButtonReceiver = new ComponentName(TiApplication.getAppRootOrCurrentActivity(), MediaButtonReceiver.class);
+        Log.i("---", "oncreate service");
+        ComponentName mediaButtonReceiver = new ComponentName(TiApplication.getAppRootOrCurrentActivity(), MyMediaReceiver.class);
         mMediaSessionCompat = new MediaSessionCompat(TiApplication.getAppRootOrCurrentActivity(), "Tag", mediaButtonReceiver, null);
 
         mMediaSessionCompat.setCallback(mMediaSessionCallback);
@@ -50,7 +49,7 @@ public class MyService extends MediaBrowserServiceCompat {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("---", "start command");
-        MediaButtonReceiver.handleIntent(mMediaSessionCompat, intent);
+        MyMediaReceiver.handleIntent(mMediaSessionCompat, intent);
         return super.onStartCommand(intent, flags, startId);
     }
 
