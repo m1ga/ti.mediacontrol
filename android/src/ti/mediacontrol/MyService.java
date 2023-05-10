@@ -1,5 +1,6 @@
 package ti.mediacontrol;
 
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
@@ -23,23 +24,24 @@ public class MyService extends MediaBrowserServiceCompat {
 
         @Override
         public void onPlay() {
-            Log.i("---", "play1");
+            Log.i("---", "service: play");
             super.onPlay();
         }
 
         @Override
         public void onPause() {
-            Log.i("---", "pause1");
+            Log.i("---", "service: pause");
             super.onPause();
         }
     };
     private MediaSessionCompat mMediaSessionCompat;
 
     @Override
+    @SuppressLint("NewApi")
     public void onCreate() {
         super.onCreate();
         Log.i("---", "oncreate service");
-        ComponentName mediaButtonReceiver = new ComponentName(TiApplication.getAppRootOrCurrentActivity(), MyMediaReceiver.class);
+        ComponentName mediaButtonReceiver = new ComponentName(TiApplication.getAppRootOrCurrentActivity(), TiMediacontrolModule.MyMediaReceiver.class);
         mMediaSessionCompat = new MediaSessionCompat(TiApplication.getAppRootOrCurrentActivity(), "Tag", mediaButtonReceiver, null);
 
         mMediaSessionCompat.setCallback(mMediaSessionCallback);
@@ -49,7 +51,7 @@ public class MyService extends MediaBrowserServiceCompat {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("---", "start command");
-        MyMediaReceiver.handleIntent(mMediaSessionCompat, intent);
+        TiMediacontrolModule.MyMediaReceiver.handleIntent(mMediaSessionCompat, intent);
         return super.onStartCommand(intent, flags, startId);
     }
 

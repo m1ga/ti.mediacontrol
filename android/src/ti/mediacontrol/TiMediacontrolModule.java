@@ -23,6 +23,7 @@ import android.os.Build;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.view.KeyEvent;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
@@ -31,6 +32,7 @@ import androidx.media.session.MediaButtonReceiver;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
+import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiConvert;
@@ -40,7 +42,7 @@ import org.appcelerator.titanium.view.TiDrawableReference;
 @RequiresApi(api = Build.VERSION_CODES.O)
 
 @Kroll.module(name = "TiMediacontrol", id = "ti.mediacontrol")
-public class TiMediacontrolModule extends KrollModule implements MediaListener {
+public class TiMediacontrolModule extends KrollModule {
 
     @Kroll.constant
     static final int PAUSE = 0;
@@ -57,6 +59,7 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
     protected MediaSessionCompat mSession;
     protected MediaController mController;
     NotificationCompat.Action playPauseAction;
+    NotificationCompat.Action playAction;
     int NOTIFICATION_ID = 999;
     String CHANNEL_ID = "TiMediaControls";
     Context context;
@@ -110,12 +113,18 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
     @Kroll.method
     public void close() {
         if (notificationManager != null) {
-            notificationManager.cancel(NOTIFICATION_ID);
+            notificationManager.cancelAll();
         }
     }
 
     @Kroll.method
     public void createPlayer(KrollDict options) {
+        if (mSession != null) {
+            mSession.release();
+        }
+        if (notificationManager != null){
+            notificationManager.cancelAll();
+        }
         context = TiApplication.getAppCurrentActivity();
         mSession = new MediaSessionCompat(context, CHANNEL_ID);
 
@@ -131,7 +140,7 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
 
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        mediaButtonIntent.setClass(context, MyMediaReceiver.class);
+        mediaButtonIntent.setClass(context, new MyMediaReceiver().getClass());
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, mediaButtonIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
@@ -140,20 +149,27 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         mSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
+                Log.i("---", "mSession: clicked play");
                 super.onPlay();
                 KrollDict kd = new KrollDict();
                 kd.put("status", PLAY);
                 fireEvent("changeStatus", kd);
                 mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 0.0f).build());
+
+                notificationBuilder.addAction(playAction);
+                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
             }
 
             @Override
             public void onPause() {
+                Log.i("---", "mSession: clicked pause");
                 super.onPause();
                 KrollDict kd = new KrollDict();
                 kd.put("status", PAUSE);
                 fireEvent("changeStatus", kd);
                 mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
+                notificationBuilder.addAction(playPauseAction);
+                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
             }
 
             @Override
@@ -184,6 +200,10 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         playPauseAction = new NotificationCompat.Action(
                 R.drawable.ic_pause, "Pause",
                 MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY_PAUSE)
+        );
+        playAction = new NotificationCompat.Action(
+                R.drawable.ic_play_arrow, "Play",
+                MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY)
         );
 
         // PendingIntent contentPendingIntent = PendingIntent.getActivity(context,
@@ -226,15 +246,32 @@ public class TiMediacontrolModule extends KrollModule implements MediaListener {
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
 
         IntentFilter intentFilter = new IntentFilter(Intent.ACTION_MEDIA_BUTTON);
-        context.registerReceiver(new MyMediaReceiver(this), intentFilter);
+        context.registerReceiver(new MyMediaReceiver(), intentFilter);
     }
 
-    @Override
-    public void onMediaStateChanged(int keyCode) {
-        if (keyCode == KEYCODE_MEDIA_PLAY_PAUSE) {
+    class MyMediaReceiver extends MediaButtonReceiver {
+
+        public MyMediaReceiver() {
+            super();
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            super.onReceive(context, intent);
+            String action = intent.getAction();
+            MediaSessionCompat mSession = new MediaSessionCompat(TiApplication.getAppRootOrCurrentActivity(), "mediaSession");
+            MediaButtonReceiver.handleIntent(mSession, intent);
+            KeyEvent ev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+            Log.i("TiMediacontrolModule", "Processing media button: " + ev);
+
+            if (ev.getKeyCode() == KEYCODE_MEDIA_PLAY_PAUSE) {
+                KrollDict kd = new KrollDict();
+                kd.put("status", PAUSE);
+                fireEvent("changeStatus", kd);
+            }
             KrollDict kd = new KrollDict();
-            kd.put("status", PAUSE);
-            fireEvent("changeStatus", kd);
+            kd.put("keyCode", ev.getKeyCode());
+            fireEvent("keyPress", kd);
         }
     }
 }
