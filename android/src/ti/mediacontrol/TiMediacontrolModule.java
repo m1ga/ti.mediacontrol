@@ -7,13 +7,12 @@
  */
 package ti.mediacontrol;
 
-import static android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
-
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -23,10 +22,10 @@ import android.os.Build;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
-import android.view.KeyEvent;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.media.session.MediaButtonReceiver;
 
 import org.appcelerator.kroll.KrollDict;
@@ -55,6 +54,7 @@ public class TiMediacontrolModule extends KrollModule {
     // Standard Debugging variables
     private static final String LCAT = "TiMediacontrolModule";
     private static final boolean DBG = TiConfig.LOGD;
+    private final IntentFilter mIntentFilter;
     protected MediaSessionManager mManager;
     protected MediaSessionCompat mSession;
     protected MediaController mController;
@@ -66,9 +66,28 @@ public class TiMediacontrolModule extends KrollModule {
     NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "mediaControls", NotificationManager.IMPORTANCE_DEFAULT);
     NotificationManager notificationManager;
     NotificationCompat.Builder notificationBuilder;
+    private final MyMediaReceiver myMediaReceiver;
 
     public TiMediacontrolModule() {
         super();
+        mIntentFilter = new IntentFilter();
+        mIntentFilter.addAction("keyPress");
+        myMediaReceiver = new MyMediaReceiver();
+        LocalBroadcastManager.getInstance(TiApplication.getAppRootOrCurrentActivity()).registerReceiver(myMediaReceiver, mIntentFilter);
+    }
+
+    public class LocalBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            KrollDict kd = new KrollDict();
+            Log.i(LCAT, "LOCAL RECEIVER");
+            String action = intent.getAction();
+            if (action.equals("keyPress")) {
+                kd.put("status", intent.getStringExtra("status"));
+                kd.put("keyCode", intent.getIntExtra("keyCode", -1));
+                fireEvent("changeStatus", kd);
+            }
+        }
     }
 
     @Kroll.onAppCreate
@@ -122,7 +141,7 @@ public class TiMediacontrolModule extends KrollModule {
         if (mSession != null) {
             mSession.release();
         }
-        if (notificationManager != null){
+        if (notificationManager != null) {
             notificationManager.cancelAll();
         }
         context = TiApplication.getAppCurrentActivity();
@@ -244,34 +263,5 @@ public class TiMediacontrolModule extends KrollModule {
         notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
         notificationManager.createNotificationChannel(notificationChannel);
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-
-        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_MEDIA_BUTTON);
-        context.registerReceiver(new MyMediaReceiver(), intentFilter);
-    }
-
-    class MyMediaReceiver extends MediaButtonReceiver {
-
-        public MyMediaReceiver() {
-            super();
-        }
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            super.onReceive(context, intent);
-            String action = intent.getAction();
-            MediaSessionCompat mSession = new MediaSessionCompat(TiApplication.getAppRootOrCurrentActivity(), "mediaSession");
-            MediaButtonReceiver.handleIntent(mSession, intent);
-            KeyEvent ev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-            Log.i("TiMediacontrolModule", "Processing media button: " + ev);
-
-            if (ev.getKeyCode() == KEYCODE_MEDIA_PLAY_PAUSE) {
-                KrollDict kd = new KrollDict();
-                kd.put("status", PAUSE);
-                fireEvent("changeStatus", kd);
-            }
-            KrollDict kd = new KrollDict();
-            kd.put("keyCode", ev.getKeyCode());
-            fireEvent("keyPress", kd);
-        }
     }
 }
