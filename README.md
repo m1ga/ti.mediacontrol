@@ -18,6 +18,8 @@
  * <b>backgroundImage</b>: background image of the player
 * <b>close()</b>: close the player/dismiss the notification.
 * <b>updateInfo({title: "", text: ""})</b>: change both strings at the same time
+* <b>play()</b>: puts the player into play mode
+* <b>pause()</b>: puts the player into pause mode
 
 ## Properties
 * <b>backgroundImage</b>: change the background image of the player
