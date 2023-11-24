@@ -55,6 +55,7 @@ public class TiMediacontrolModule extends KrollModule {
     private static final String LCAT = "TiMediacontrolModule";
     private static final boolean DBG = TiConfig.LOGD;
     private final IntentFilter mIntentFilter;
+    private final MyMediaReceiver myMediaReceiver;
     protected MediaSessionManager mManager;
     protected MediaSessionCompat mSession;
     protected MediaController mController;
@@ -66,7 +67,7 @@ public class TiMediacontrolModule extends KrollModule {
     NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "mediaControls", NotificationManager.IMPORTANCE_DEFAULT);
     NotificationManager notificationManager;
     NotificationCompat.Builder notificationBuilder;
-    private final MyMediaReceiver myMediaReceiver;
+    PlaybackStateCompat.Builder stateBuilder;
 
     public TiMediacontrolModule() {
         super();
@@ -74,20 +75,6 @@ public class TiMediacontrolModule extends KrollModule {
         mIntentFilter.addAction("keyPress");
         myMediaReceiver = new MyMediaReceiver();
         LocalBroadcastManager.getInstance(TiApplication.getAppRootOrCurrentActivity()).registerReceiver(myMediaReceiver, mIntentFilter);
-    }
-
-    public class LocalBroadcastReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            KrollDict kd = new KrollDict();
-            Log.i(LCAT, "LOCAL RECEIVER");
-            String action = intent.getAction();
-            if (action.equals("keyPress")) {
-                kd.put("status", intent.getStringExtra("status"));
-                kd.put("keyCode", intent.getIntExtra("keyCode", -1));
-                fireEvent("changeStatus", kd);
-            }
-        }
     }
 
     @Kroll.onAppCreate
@@ -117,6 +104,20 @@ public class TiMediacontrolModule extends KrollModule {
         if (!source.isTypeNull()) {
             notificationBuilder.setLargeIcon(source.getBitmap());
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
+    }
+
+    @Kroll.method
+    public void pause() {
+        if (notificationBuilder != null && notificationManager != null && mSession != null) {
+            mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
+        }
+    }
+
+    @Kroll.method
+    public void play() {
+        if (notificationBuilder != null && notificationManager != null && mSession != null) {
+            mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 0.0f).build());
         }
     }
 
@@ -156,7 +157,7 @@ public class TiMediacontrolModule extends KrollModule {
         if (options.containsKeyAndNotNull("showPrevious")) {
             actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
         }
-        PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
+        stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
 
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
         mediaButtonIntent.setClass(context, new MyMediaReceiver().getClass());
@@ -168,7 +169,7 @@ public class TiMediacontrolModule extends KrollModule {
         mSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
-                Log.i("---", "mSession: clicked play");
+                Log.d(LCAT, "mSession: clicked play");
                 super.onPlay();
                 KrollDict kd = new KrollDict();
                 kd.put("status", PLAY);
@@ -181,7 +182,7 @@ public class TiMediacontrolModule extends KrollModule {
 
             @Override
             public void onPause() {
-                Log.i("---", "mSession: clicked pause");
+                Log.d(LCAT, "mSession: clicked pause");
                 super.onPause();
                 KrollDict kd = new KrollDict();
                 kd.put("status", PAUSE);
@@ -263,5 +264,19 @@ public class TiMediacontrolModule extends KrollModule {
         notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
         notificationManager.createNotificationChannel(notificationChannel);
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+    }
+
+    public class LocalBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            KrollDict kd = new KrollDict();
+            Log.i(LCAT, "LOCAL RECEIVER");
+            String action = intent.getAction();
+            if (action.equals("keyPress")) {
+                kd.put("status", intent.getStringExtra("status"));
+                kd.put("keyCode", intent.getIntExtra("keyCode", -1));
+                fireEvent("changeStatus", kd);
+            }
+        }
     }
 }

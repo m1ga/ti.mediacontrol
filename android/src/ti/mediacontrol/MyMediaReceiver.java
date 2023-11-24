@@ -10,7 +10,6 @@ import android.view.KeyEvent;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.media.session.MediaButtonReceiver;
 
-import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.common.Log;
 import org.appcelerator.titanium.TiApplication;
 
@@ -27,7 +26,7 @@ public class MyMediaReceiver extends MediaButtonReceiver {
         MediaSessionCompat mSession = new MediaSessionCompat(TiApplication.getAppRootOrCurrentActivity(), "mediaSession");
         MediaButtonReceiver.handleIntent(mSession, intent);
         KeyEvent ev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-        Log.i("TiMediacontrolModule", "Processing media button: " + ev);
+        Log.d("MyMediaReceiver", "Processing media button: " + ev);
 
         if (ev.getKeyCode() == KEYCODE_MEDIA_PLAY_PAUSE) {
 
