@@ -32,6 +32,11 @@ btn_change.addEventListener("click", function() {
 		title: "music playing",
 		text: "some radio station"
 	})
+	mediaControl.setMetadata({
+		artist: "music playing",
+		album: "music playing",
+		title: "some radio station"
+	})
 })
 
 btn_close.addEventListener("click", function() {
@@ -74,6 +79,12 @@ mediaControl.addEventListener("changeStatus", function(e) {
 			mediaControl.updateInfo({
 				title: "music playing",
 				text: "some radio station"
+			})
+
+			mediaControl.setMetadata({
+				artist: "music playing 2",
+				album: "music playing 2",
+				title: "some radio station 2"
 			})
 		}
 	} else if (e.status == mediaControl.NEXT) {

@@ -21,6 +21,13 @@
 * <b>play()</b>: puts the player into play mode
 * <b>pause()</b>: puts the player into pause mode
 
+* <b>setMetadata(options)</b>: sets the track metadata
+  <b>Options:</b>
+ * <b>title</b>: Text
+ * <b>artist</b>: Text
+ * <b>album</b>: Text
+
+
 ## Properties
 * <b>backgroundImage</b>: change the background image of the player
 * <b>title</b>: change the first row (title)

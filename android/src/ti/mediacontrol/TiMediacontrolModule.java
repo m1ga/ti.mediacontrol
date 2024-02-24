@@ -16,9 +16,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.os.Build;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -127,6 +129,19 @@ public class TiMediacontrolModule extends KrollModule {
             notificationBuilder.setContentTitle(options.getString(("title")));
             notificationBuilder.setContentText(options.getString(("text")));
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
+    }
+
+    @Kroll.method
+    public void setMetadata(KrollDict options) {
+        if (mSession != null) {
+            var metadataBuilder = new MediaMetadataCompat.Builder();
+            metadataBuilder.putString(MediaMetadata.METADATA_KEY_TITLE, options.getString(("title")));
+            metadataBuilder.putString(MediaMetadata.METADATA_KEY_ARTIST, options.getString(("artist")));
+            metadataBuilder.putString(MediaMetadata.METADATA_KEY_ALBUM, options.getString(("album")));
+
+            var metadata = metadataBuilder.build();
+            mSession.setMetadata(metadata);
         }
     }
 
