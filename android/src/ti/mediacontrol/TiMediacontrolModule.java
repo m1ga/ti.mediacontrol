@@ -166,10 +166,10 @@ public class TiMediacontrolModule extends KrollModule {
         long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
                 | PlaybackStateCompat.ACTION_PLAY_PAUSE;
 
-        if (options.containsKeyAndNotNull("showNext")) {
+        if (options.containsKeyAndNotNull("showNext") && options.getBoolean("showNext")) {
             actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
         }
-        if (options.containsKeyAndNotNull("showPrevious")) {
+        if (options.containsKeyAndNotNull("showPrevious") && options.getBoolean("showPrevious")) {
             actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
         }
         stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
@@ -285,7 +285,7 @@ public class TiMediacontrolModule extends KrollModule {
         @Override
         public void onReceive(Context context, Intent intent) {
             KrollDict kd = new KrollDict();
-            Log.i(LCAT, "LOCAL RECEIVER");
+            //Log.i(LCAT, "LOCAL RECEIVER");
             String action = intent.getAction();
             if (action.equals("keyPress")) {
                 kd.put("status", intent.getStringExtra("status"));
