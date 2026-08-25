@@ -8,39 +8,30 @@
 package ti.mediacontrol;
 
 import android.app.Activity;
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.media.MediaMetadata;
-import android.media.session.MediaController;
-import android.media.session.MediaSessionManager;
 import android.os.Build;
 import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 
-import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.media.session.MediaButtonReceiver;
 
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
-import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiConvert;
 import org.appcelerator.titanium.view.TiDrawableReference;
 
-
-@RequiresApi(api = Build.VERSION_CODES.O)
 
 @Kroll.module(name = "TiMediacontrol", id = "ti.mediacontrol")
 public class TiMediacontrolModule extends KrollModule {
@@ -53,35 +44,35 @@ public class TiMediacontrolModule extends KrollModule {
     static final int PREVIOUS = 2;
     @Kroll.constant
     static final int NEXT = 3;
-    // Standard Debugging variables
     private static final String LCAT = "TiMediacontrolModule";
-    private static final boolean DBG = TiConfig.LOGD;
-    private final IntentFilter mIntentFilter;
-    private final MyMediaReceiver myMediaReceiver;
-    protected MediaSessionManager mManager;
+    private static final int NOTIFICATION_ID = 999;
+    private static final String CHANNEL_ID = "TiMediaControls";
+    private static TiMediacontrolModule instance;
     protected MediaSessionCompat mSession;
-    protected MediaController mController;
-    NotificationCompat.Action playPauseAction;
+    NotificationCompat.Action pauseAction;
     NotificationCompat.Action playAction;
-    int NOTIFICATION_ID = 999;
-    String CHANNEL_ID = "TiMediaControls";
     Context context;
-    NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "mediaControls", NotificationManager.IMPORTANCE_DEFAULT);
     NotificationManager notificationManager;
     NotificationCompat.Builder notificationBuilder;
     PlaybackStateCompat.Builder stateBuilder;
+    MediaMetadataCompat.Builder metadataBuilder;
 
     public TiMediacontrolModule() {
         super();
-        mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction("keyPress");
-        myMediaReceiver = new MyMediaReceiver();
-        LocalBroadcastManager.getInstance(TiApplication.getAppRootOrCurrentActivity()).registerReceiver(myMediaReceiver, mIntentFilter);
+        instance = this;
     }
 
     @Kroll.onAppCreate
     public static void onAppCreate(TiApplication app) {
 
+    }
+
+    static TiMediacontrolModule getInstance() {
+        return instance;
+    }
+
+    static MediaSessionCompat getActiveSession() {
+        return instance != null ? instance.mSession : null;
     }
 
     @Kroll.setProperty
@@ -102,66 +93,95 @@ public class TiMediacontrolModule extends KrollModule {
 
     @Kroll.setProperty
     public void setBackgroundImage(String value) {
-        TiDrawableReference source = TiDrawableReference.fromObject(this, value);
-        if (!source.isTypeNull()) {
-            notificationBuilder.setLargeIcon(source.getBitmap());
-            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        if (notificationBuilder != null && notificationManager != null) {
+            TiDrawableReference source = TiDrawableReference.fromObject(this, value);
+            if (!source.isTypeNull()) {
+                setCover(source.getBitmap());
+                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+            }
+        }
+    }
+
+    private void setCover(Bitmap bitmap) {
+        if (notificationBuilder != null) {
+            notificationBuilder.setLargeIcon(bitmap);
+        }
+        if (mSession != null && metadataBuilder != null) {
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap);
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
+            mSession.setMetadata(metadataBuilder.build());
         }
     }
 
     @Kroll.method
     public void pause() {
-        if (notificationBuilder != null && notificationManager != null && mSession != null) {
-            mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
+        if (mSession != null) {
+            mSession.getController().getTransportControls().pause();
         }
     }
 
     @Kroll.method
     public void play() {
-        if (notificationBuilder != null && notificationManager != null && mSession != null) {
-            mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 0.0f).build());
+        if (mSession != null) {
+            mSession.getController().getTransportControls().play();
         }
     }
 
     @Kroll.method
     public void updateInfo(KrollDict options) {
         if (notificationBuilder != null && notificationManager != null) {
-            notificationBuilder.setContentTitle(options.getString(("title")));
-            notificationBuilder.setContentText(options.getString(("text")));
+            notificationBuilder.setContentTitle(options.getString("title"));
+            notificationBuilder.setContentText(options.getString("text"));
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
         }
     }
 
     @Kroll.method
     public void setMetadata(KrollDict options) {
-        if (mSession != null) {
-            var metadataBuilder = new MediaMetadataCompat.Builder();
-            metadataBuilder.putString(MediaMetadata.METADATA_KEY_TITLE, options.getString(("title")));
-            metadataBuilder.putString(MediaMetadata.METADATA_KEY_ARTIST, options.getString(("artist")));
-            metadataBuilder.putString(MediaMetadata.METADATA_KEY_ALBUM, options.getString(("album")));
-
-            var metadata = metadataBuilder.build();
-            mSession.setMetadata(metadata);
+        if (mSession != null && metadataBuilder != null) {
+            if (options.containsKeyAndNotNull("title")) {
+                metadataBuilder.putString(MediaMetadata.METADATA_KEY_TITLE, options.getString("title"));
+            }
+            if (options.containsKeyAndNotNull("artist")) {
+                metadataBuilder.putString(MediaMetadata.METADATA_KEY_ARTIST, options.getString("artist"));
+            }
+            if (options.containsKeyAndNotNull("album")) {
+                metadataBuilder.putString(MediaMetadata.METADATA_KEY_ALBUM, options.getString("album"));
+            }
+            mSession.setMetadata(metadataBuilder.build());
         }
     }
 
     @Kroll.method
     public void close() {
+        boolean wasActive = mSession != null;
+        destroyPlayer();
+        if (wasActive) {
+            KrollDict kd = new KrollDict();
+            kd.put("status", PAUSE);
+            fireEvent("changeStatus", kd);
+        }
+    }
+
+    private void destroyPlayer() {
         if (notificationManager != null) {
-            notificationManager.cancelAll();
+            notificationManager.cancel(NOTIFICATION_ID);
+        }
+        notificationBuilder = null;
+        metadataBuilder = null;
+        if (mSession != null) {
+            mSession.setActive(false);
+            mSession.release();
+            mSession = null;
         }
     }
 
     @Kroll.method
     public void createPlayer(KrollDict options) {
-        if (mSession != null) {
-            mSession.release();
-        }
-        if (notificationManager != null) {
-            notificationManager.cancelAll();
-        }
-        context = TiApplication.getAppCurrentActivity();
+        destroyPlayer();
+        context = TiApplication.getInstance().getApplicationContext();
         mSession = new MediaSessionCompat(context, CHANNEL_ID);
+        metadataBuilder = new MediaMetadataCompat.Builder();
 
         long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
                 | PlaybackStateCompat.ACTION_PLAY_PAUSE;
@@ -174,12 +194,13 @@ public class TiMediacontrolModule extends KrollModule {
         }
         stateBuilder = new PlaybackStateCompat.Builder().setActions(actions);
 
+        ComponentName receiverComponent = new ComponentName(context, MyMediaReceiver.class);
         Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        mediaButtonIntent.setClass(context, new MyMediaReceiver().getClass());
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, mediaButtonIntent,
+        mediaButtonIntent.setComponent(receiverComponent);
+        PendingIntent mediaButtonPendingIntent = PendingIntent.getBroadcast(context, 0, mediaButtonIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
-        mSession.setMediaButtonReceiver(pendingIntent);
+        mSession.setMediaButtonReceiver(mediaButtonPendingIntent);
         mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
         mSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
@@ -189,10 +210,7 @@ public class TiMediacontrolModule extends KrollModule {
                 KrollDict kd = new KrollDict();
                 kd.put("status", PLAY);
                 fireEvent("changeStatus", kd);
-                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 0.0f).build());
-
-                notificationBuilder.addAction(playAction);
-                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+                updatePlaybackState(true);
             }
 
             @Override
@@ -202,9 +220,7 @@ public class TiMediacontrolModule extends KrollModule {
                 KrollDict kd = new KrollDict();
                 kd.put("status", PAUSE);
                 fireEvent("changeStatus", kd);
-                mSession.setPlaybackState(stateBuilder.setState(PlaybackStateCompat.STATE_PAUSED, 0, 0.0f).build());
-                notificationBuilder.addAction(playPauseAction);
-                notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+                updatePlaybackState(false);
             }
 
             @Override
@@ -222,39 +238,35 @@ public class TiMediacontrolModule extends KrollModule {
                 kd.put("status", PREVIOUS);
                 fireEvent("changeStatus", kd);
             }
-
-            @Override
-            public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
-                return super.onMediaButtonEvent(mediaButtonEvent);
-            }
         });
         mSession.setActive(true);
 
-        notificationBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
+        PendingIntent contentIntent = null;
+        Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (launchIntent != null) {
+            contentIntent = PendingIntent.getActivity(context, 0, launchIntent,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            mSession.setSessionActivity(contentIntent);
+        }
 
-        playPauseAction = new NotificationCompat.Action(
+        pauseAction = new NotificationCompat.Action(
                 R.drawable.ic_pause, "Pause",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY_PAUSE)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(context, receiverComponent, PlaybackStateCompat.ACTION_PAUSE)
         );
         playAction = new NotificationCompat.Action(
                 R.drawable.ic_play_arrow, "Play",
-                MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_PLAY)
+                MediaButtonReceiver.buildMediaButtonPendingIntent(context, receiverComponent, PlaybackStateCompat.ACTION_PLAY)
         );
 
-        // PendingIntent contentPendingIntent = PendingIntent.getActivity(context,
-        //      0, new Intent(TiApplication.getAppRootOrCurrentActivity().getIntent()),
-        //      PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        // );
-
-        MediaControllerCompat controller = mSession.getController();
+        notificationBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
         notificationBuilder.setContentTitle(options.getString("title"))
                 .setContentText(options.getString("text"))
                 .setSmallIcon(android.R.drawable.ic_media_play)
-                .setContentIntent(controller.getSessionActivity())
+                .setContentIntent(contentIntent)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .addAction(playPauseAction)
+                .addAction(playAction)
                 .setOngoing(true)
-                .setPriority(Notification.PRIORITY_MAX)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                         .setMediaSession(mSession.getSessionToken())
                         .setShowActionsInCompactView(0)
@@ -271,27 +283,38 @@ public class TiMediacontrolModule extends KrollModule {
         if (options.containsKeyAndNotNull("backgroundImage")) {
             TiDrawableReference source = TiDrawableReference.fromObject(this, options.get("backgroundImage"));
             if (!source.isTypeNull()) {
-                notificationBuilder.setLargeIcon(source.getBitmap());
+                setCover(source.getBitmap());
             }
         }
 
-        notificationChannel.setSound(null, null);
-        notificationManager = (NotificationManager) context.getSystemService(Activity.NOTIFICATION_SERVICE);
-        notificationManager.createNotificationChannel(notificationChannel);
+        notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "mediaControls",
+                    NotificationManager.IMPORTANCE_LOW);
+            notificationChannel.setSound(null, null);
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
-    public class LocalBroadcastReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            KrollDict kd = new KrollDict();
-            //Log.i(LCAT, "LOCAL RECEIVER");
-            String action = intent.getAction();
-            if (action.equals("keyPress")) {
-                kd.put("status", intent.getStringExtra("status"));
-                kd.put("keyCode", intent.getIntExtra("keyCode", -1));
-                fireEvent("changeStatus", kd);
-            }
+    private void updatePlaybackState(boolean playing) {
+        if (mSession == null || stateBuilder == null) {
+            return;
         }
+        mSession.setPlaybackState(stateBuilder.setState(
+                playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED,
+                0, playing ? 1.0f : 0.0f).build());
+
+        if (notificationBuilder != null && notificationManager != null) {
+            notificationBuilder.mActions.clear();
+            notificationBuilder.addAction(playing ? pauseAction : playAction);
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+        }
+    }
+
+    @Override
+    public void onDestroy(Activity activity) {
+        super.onDestroy(activity);
+        close();
     }
 }
